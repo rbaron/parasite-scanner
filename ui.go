@@ -14,58 +14,67 @@ func UIRun(inChan chan string, db *DB) {
 	}
 	defer ui.Close()
 
-	p1 := widgets.NewPlot()
-	p1.Title = "Soil Moisture"
-	p1.Marker = widgets.MarkerDot
-	p1.SetRect(0, 0, 200, 40)
-	p1.DotMarkerRune = '+'
-	p1.AxesColor = ui.ColorWhite
-	p1.LineColors[0] = ui.ColorRed
-	p1.DrawDirection = widgets.DrawRight
-	p1.MaxVal = 100.
+	soilMoistureChart := widgets.NewPlot()
+	soilMoistureChart.Title = "Soil Moisture (%)"
+	soilMoistureChart.Marker = widgets.MarkerDot
+	soilMoistureChart.SetRect(0, 0, 150, 40)
+	soilMoistureChart.DotMarkerRune = '+'
+	soilMoistureChart.LineColors[0] = ui.ColorBlue
+	soilMoistureChart.MaxVal = 100.
 
-	// list := widgets.NewList()
-	// list.Title = "b-parasites"
-	// // list.Rows = []string{
-	// // 	"Item 1",
-	// // 	"Item 2",
-	// // 	"Item 3",
-	// // }
-	// list.TextStyle = ui.NewStyle(ui.ColorWhite)
-	// list.SelectedRowStyle = ui.NewStyle(ui.ColorBlue)
-	// list.WrapText = true
-	// list.SetRect(200, 0, 250, 50)
+	tempChart := widgets.NewPlot()
+	tempChart.Title = "Temperature (C)"
+	tempChart.Marker = widgets.MarkerDot
+	tempChart.SetRect(150, 0, 200, 10)
+	tempChart.DotMarkerRune = '+'
+	tempChart.LineColors[0] = ui.ColorYellow
+
+	humidityChart := widgets.NewPlot()
+	humidityChart.Title = "Humidity (%)"
+	humidityChart.Marker = widgets.MarkerDot
+	humidityChart.SetRect(150, 10, 200, 20)
+	humidityChart.DotMarkerRune = '+'
+	humidityChart.LineColors[0] = ui.ColorGreen
+
+	batteryChart := widgets.NewPlot()
+	batteryChart.Title = "Battery Voltage (V)"
+	batteryChart.Marker = widgets.MarkerDot
+	batteryChart.SetRect(150, 20, 200, 30)
+	batteryChart.DotMarkerRune = '+'
+	batteryChart.LineColors[0] = ui.ColorRed
 
 	table := widgets.NewTable()
-	// table.Rows = [][]string{
-	// 	[]string{"header1", "header2", "header3"},
-	// 	[]string{"AAA", "BBB", "CCC"},
-	// 	[]string{"DDD", "EEE", "FFF"},
-	// 	[]string{"GGG", "HHH", "III"},
-	// }
-	table.Title = "b-parasites"
+	table.Title = "Discovered b-parasites"
 	table.TextStyle = ui.NewStyle(ui.ColorWhite)
 	table.RowSeparator = true
-	// table.BorderStyle = ui.NewStyle(ui.ColorGreen)
 	table.SetRect(0, 40, 200, 60)
 	table.FillRow = true
 	table.Rows = [][]string{{"UUID", "Soil Moisture", "Temperature", "Humitiy", "Battery Voltage"}}
-	// table.RowStyles[0] = ui.NewStyle(ui.ColorWhite, ui.ColorBlack, ui.ModifierBold)
 	table.RowStyles[0] = ui.NewStyle(ui.ColorWhite, ui.ColorClear, ui.ModifierBold)
-	// table.RowStyles[2] = ui.NewStyle(ui.ColorWhite, ui.ColorRed, ui.ModifierBold)
-	// table.RowStyles[3] = ui.NewStyle(ui.ColorYellow)
 
-	ui.Render(p1, table)
+	render := func() {
+		ui.Render(soilMoistureChart, tempChart, humidityChart, batteryChart, table)
+	}
+	render()
 
 	refreshData := func(key string) {
-		series := []float64{}
+		soilMoistureSeries := []float64{}
+		tempSeries := []float64{}
+		humiditySeries := []float64{}
+		battySeries := []float64{}
 		r := (*db)[key]
 		for p := r.Next(); p != r; p = p.Next() {
 			if p.Value != nil {
-				series = append(series, float64(p.Value.(ParasiteData).SoilMoisture))
+				soilMoistureSeries = append(soilMoistureSeries, float64(p.Value.(ParasiteData).SoilMoisture))
+				tempSeries = append(tempSeries, float64(p.Value.(ParasiteData).TempCelcius))
+				humiditySeries = append(humiditySeries, float64(p.Value.(ParasiteData).Humidity))
+				battySeries = append(battySeries, float64(p.Value.(ParasiteData).BatteryVoltage))
 			}
 		}
-		p1.Data = [][]float64{series}
+		soilMoistureChart.Data = [][]float64{soilMoistureSeries}
+		tempChart.Data = [][]float64{tempSeries}
+		humidityChart.Data = [][]float64{humiditySeries}
+		batteryChart.Data = [][]float64{battySeries}
 
 		table.Rows = [][]string{}
 		keys := make([]string, 0)
@@ -84,8 +93,7 @@ func UIRun(inChan chan string, db *DB) {
 				fmt.Sprintf("%3.1fV", last.BatteryVoltage),
 			})
 		}
-
-		ui.Render(p1, table)
+		render()
 	}
 
 	uiEvents := ui.PollEvents()
