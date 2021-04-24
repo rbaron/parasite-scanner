@@ -41,7 +41,7 @@ func main() {
 			r = ring.New(kRingSize)
 		} else {
 			// Avoid reprocessing repeated packets.
-			if r.Value.(ParasiteData).Counter == data.Counter {
+			if r.Prev().Value.(ParasiteData).Counter == data.Counter {
 				continue
 			}
 		}
