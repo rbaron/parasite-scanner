@@ -16,6 +16,7 @@ type ParasiteData struct {
 	Humidity       float32
 	SoilMoisture   float32
 	Time           time.Time
+	RSSI           int
 }
 
 func (pd ParasiteData) String() string {
@@ -55,6 +56,7 @@ func parseParasiteData(scanResult bluetooth.ScanResult) (ParasiteData, error) {
 		Humidity:       100 * float32(humidity) / (1 << 16),
 		SoilMoisture:   100 * float32(soilMoisture) / (1 << 16),
 		Time:           time.Now(),
+		RSSI:           int(scanResult.RSSI),
 	}, nil
 }
 
