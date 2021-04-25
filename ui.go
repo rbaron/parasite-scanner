@@ -3,7 +3,6 @@ package main
 import (
 	"container/ring"
 	"fmt"
-	"strings"
 	"time"
 
 	ui "github.com/gizak/termui/v3"
@@ -96,7 +95,7 @@ func UIRun(inChan chan string, db *DB) {
 	table.RowSeparator = true
 	table.SetRect(0, 36+kHeaderHeight, 200, 60+kHeaderHeight)
 	table.FillRow = true
-	table.Rows = [][]string{{"UUID", "Soil Moisture", "Temperature", "Humitiy", "Battery Voltage"}}
+	table.Rows = [][]string{{"UUID", "Soil Moisture", "Temperature", "Humidity", "Battery Voltage"}}
 	table.RowStyles[0] = ui.NewStyle(ui.ColorWhite, ui.ColorClear, ui.ModifierBold)
 
 	render := func() {
@@ -117,7 +116,8 @@ func UIRun(inChan chan string, db *DB) {
 		for i, k := range keys {
 			var last = (*db)[k].Prev().Value.(ParasiteData)
 			table.Rows = append(table.Rows, []string{
-				strings.Split(last.Key, "-")[4],
+				// strings.Split(last.Key, "-")[4],
+				last.Key,
 				fmt.Sprintf("%5.1f%%", last.SoilMoisture),
 				fmt.Sprintf("%5.1fC", last.TempCelcius),
 				fmt.Sprintf("%5.1f%%", last.Humidity),

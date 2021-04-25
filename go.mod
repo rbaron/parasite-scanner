@@ -7,4 +7,4 @@ require (
 	tinygo.org/x/bluetooth v0.3.0
 )
 
-replace tinygo.org/x/bluetooth v0.3.0 => /Users/rbaron/dev/go/src/github.com/tinygo-org/bluetooth
+replace tinygo.org/x/bluetooth v0.3.0 => /home/rbaron/go/bluetooth
