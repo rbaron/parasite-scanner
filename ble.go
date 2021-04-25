@@ -38,8 +38,6 @@ func parseParasiteData(scanResult bluetooth.ScanResult) (ParasiteData, error) {
 	serviceData := scanResult.AdvertisementPayload.GetServiceDatas()[0]
 
 	uuid := serviceData.UUID
-	// fmt.Println("PARAST:", serviceData.UUID.Is16Bit(), serviceData.UUID.Get16Bit())
-	// if uuid[len(uuid)-1] != 0x18 || uuid[len(uuid)-2] != 0x1a {
 	if !uuid.Is16Bit() || uuid.Get16Bit() != 0x181a {
 		return ParasiteData{}, fmt.Errorf("invalid service data uuid: %s", uuid)
 	}
