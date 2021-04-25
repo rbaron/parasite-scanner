@@ -28,12 +28,15 @@ func DumpDB() {
 }
 
 func main() {
+	config, err := ParseConfig("example_config.yaml")
+	fmt.Println(err, config)
+	return
 	fmt.Println("Waiting for parasites' BLE advertisements...")
 	ch := make(chan ParasiteData)
 	go StartScanning(ch)
 
-	ui_chan := make(chan string)
-	go UIRun(ui_chan, &db)
+	// ui_chan := make(chan string)
+	// go UIRun(ui_chan, &db)
 
 	for data := range ch {
 		r, exists := db[data.Key]
@@ -47,6 +50,6 @@ func main() {
 		}
 		r.Value = data
 		db[data.Key] = r.Next()
-		ui_chan <- data.Key
+		// ui_chan <- data.Key
 	}
 }

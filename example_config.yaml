@@ -1,0 +1,12 @@
+mqtt:
+  host: raspberrypi
+  username: mqttuser
+  password: mqttpassword
+  client_id: parasite-scanner
+  auto_discovery: true
+  registry:
+    "f0:ca:f0:ca:00:08":
+      soil_moisture_topic: home/parasite-scanner/08/soil_moisture
+      temperature_topic: home/parasite-scanner/08/temperature
+      humidity_topic: home/parasite-scanner/08/humidity
+      battery_voltage_topic: home/parasite-scanner/08/battery_voltage
