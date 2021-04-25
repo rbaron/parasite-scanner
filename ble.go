@@ -21,25 +21,26 @@ type ParasiteData struct {
 
 func (pd ParasiteData) String() string {
 	return fmt.Sprintf(
-		"%s | soil: %5.1f%% | batt: %3.1fV | temp: %4.1fC | humi: %5.1f%% | %6.1fs ago\n",
+		"%s | soil: %5.1f%% | batt: %3.1fV | temp: %4.1fC | humi: %5.1f%% | %6.1fs ago | counter: %d\n",
 		pd.Key,
 		pd.SoilMoisture,
 		pd.BatteryVoltage,
 		pd.TempCelcius,
 		pd.Humidity,
-		time.Since(pd.Time).Seconds())
+		time.Since(pd.Time).Seconds(),
+		pd.Counter)
 }
 
-func parseParasiteData(scanResult bluetooth.ScanResult) (ParasiteData, error) {
+func parseParasiteData(scanResult bluetooth.ScanResult) (*ParasiteData, error) {
 	if len(scanResult.AdvertisementPayload.GetServiceDatas()) != 1 {
-		return ParasiteData{}, fmt.Errorf("unexpected length of service datas")
+		return nil, fmt.Errorf("unexpected length of service datas")
 	}
 
 	serviceData := scanResult.AdvertisementPayload.GetServiceDatas()[0]
 
 	uuid := serviceData.UUID
 	if !uuid.Is16Bit() || uuid.Get16Bit() != 0x181a {
-		return ParasiteData{}, fmt.Errorf("invalid service data uuid: %s", uuid)
+		return nil, fmt.Errorf("invalid service data uuid: %s", uuid)
 	}
 
 	counter := serviceData.Data[1] & 0x0f
@@ -48,7 +49,7 @@ func parseParasiteData(scanResult bluetooth.ScanResult) (ParasiteData, error) {
 	humidity := binary.BigEndian.Uint16(serviceData.Data[6:8])
 	soilMoisture := binary.BigEndian.Uint16(serviceData.Data[8:10])
 
-	return ParasiteData{
+	return &ParasiteData{
 		Key:            scanResult.Address.String(),
 		Counter:        counter,
 		BatteryVoltage: float32(batteryVoltage) / 1000,
@@ -60,7 +61,7 @@ func parseParasiteData(scanResult bluetooth.ScanResult) (ParasiteData, error) {
 	}, nil
 }
 
-func StartScanning(ch chan ParasiteData) {
+func StartScanning(ch chan *ParasiteData) {
 	var adapter = bluetooth.DefaultAdapter
 
 	if err := adapter.Enable(); err != nil {
