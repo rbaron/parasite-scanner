@@ -8,6 +8,8 @@ import (
 	"tinygo.org/x/bluetooth"
 )
 
+const kMacOSMACAddrPrefix = "f0:ca:f0:ca:"
+
 type ParasiteData struct {
 	Key            string
 	Counter        uint8
@@ -19,9 +21,17 @@ type ParasiteData struct {
 	RSSI           int
 }
 
+type ParasiteScanner struct {
+	// We use a wrap-around counter inside the advertisement payload for
+	// deduplicating messages.
+	lastCounter map[string]int
+	channel     chan *ParasiteData
+	cfg         *BLEConfig
+}
+
 func (pd ParasiteData) String() string {
 	return fmt.Sprintf(
-		"%s | soil: %5.1f%% | batt: %3.1fV | temp: %4.1fC | humi: %5.1f%% | %6.1fs ago | counter: %d\n",
+		"%s | soil: %5.1f%% | batt: %3.1fV | temp: %4.1fC | humi: %5.1f%% | %6.1fs ago | counter: %d",
 		pd.Key,
 		pd.SoilMoisture,
 		pd.BatteryVoltage,
@@ -31,7 +41,47 @@ func (pd ParasiteData) String() string {
 		pd.Counter)
 }
 
-func parseParasiteData(scanResult bluetooth.ScanResult) (*ParasiteData, error) {
+func MakeParasiteScanner(cfg *BLEConfig) *ParasiteScanner {
+	return &ParasiteScanner{
+		lastCounter: map[string]int{},
+		channel:     make(chan *ParasiteData),
+		cfg:         cfg,
+	}
+}
+
+// This is a workaround for getting the MAC address on macOS.
+// Ideally, we'd like the "key" for every scan result to be the
+// MAC address for the discovered device.
+// On Linux, that works well and that's what we use.
+// On macOS, scanned devices' MAC addresses are hidden for privacy
+// reasons, and the API only returns an UUID for us instead.
+// To get around this, I encoded the last two bytes of parasites'
+// MAC addresses in their advertisement data, so we can sort of
+// infer the whole MAC address if we assume the leading bytes.
+func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
+	addr := scanResult.Address.String()
+	if !cfg.MacOS.InferMACAddress {
+		return addr
+	}
+
+	isUUID := len(addr) == 36
+
+	// // Linux - we already have the MAC address, so just return that.
+	if !isUUID {
+		return addr
+	} else {
+		// macOS - we try to read the MAC address from the payload data.
+		serviceData := scanResult.AdvertisementPayload.GetServiceDatas()[0].Data
+		if len(serviceData) >= 12 {
+			lsb1 := serviceData[10]
+			lsb0 := serviceData[11]
+			return fmt.Sprintf("%s:%02d:%02d", cfg.MacOS.MACAddressPrefix, lsb1, lsb0)
+		}
+		return addr
+	}
+}
+
+func parseParasiteData(cfg *BLEConfig, scanResult bluetooth.ScanResult) (*ParasiteData, error) {
 	if len(scanResult.AdvertisementPayload.GetServiceDatas()) != 1 {
 		return nil, fmt.Errorf("unexpected length of service datas")
 	}
@@ -50,7 +100,7 @@ func parseParasiteData(scanResult bluetooth.ScanResult) (*ParasiteData, error) {
 	soilMoisture := binary.BigEndian.Uint16(serviceData.Data[8:10])
 
 	return &ParasiteData{
-		Key:            scanResult.Address.String(),
+		Key:            getKey(cfg, &scanResult),
 		Counter:        counter,
 		BatteryVoltage: float32(batteryVoltage) / 1000,
 		TempCelcius:    float32(tempCelcius) / 1000,
@@ -61,20 +111,25 @@ func parseParasiteData(scanResult bluetooth.ScanResult) (*ParasiteData, error) {
 	}, nil
 }
 
-func StartScanning(ch chan *ParasiteData) {
+func (scanner *ParasiteScanner) Run() {
 	var adapter = bluetooth.DefaultAdapter
 
 	if err := adapter.Enable(); err != nil {
-		panic("Unable to initialize the BLE stack: " + err.Error())
+		panic("unable to initialize the BLE stack: " + err.Error())
 	}
 
 	err := adapter.Scan(func(adapter *bluetooth.Adapter, scanResult bluetooth.ScanResult) {
 		if scanResult.LocalName() == "prst" {
-			data, err := parseParasiteData(scanResult)
+			data, err := parseParasiteData(scanner.cfg, scanResult)
 			if err != nil {
-				fmt.Println("error parsing parasite data:", err.Error())
+				logger.Println("error parsing parasite data:", err.Error())
 			} else {
-				ch <- data
+				// Have we processed this data already?
+				if oldCounter, exists := scanner.lastCounter[data.Key]; exists && oldCounter == int(data.Counter) {
+					return
+				}
+				scanner.lastCounter[data.Key] = int(data.Counter)
+				scanner.channel <- data
 			}
 		}
 	})
@@ -82,5 +137,4 @@ func StartScanning(ch chan *ParasiteData) {
 	if err != nil {
 		panic("unable to start scanning: " + err.Error())
 	}
-
 }

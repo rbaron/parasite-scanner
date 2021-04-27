@@ -45,6 +45,7 @@ func InitUI() *TUI {
 	tui.selectedKeyIndex = -1
 	tui.db = &DB{}
 	tui.widgets = initWidgets()
+	tui.Render()
 	return tui
 }
 
@@ -178,11 +179,6 @@ func (tui *TUI) Run() {
 			r, exists := (*tui.db)[data.Key]
 			if !exists {
 				r = ring.New(kRingSize)
-			} else {
-				// Avoid reprocessing repeated packets.
-				if r.Prev().Value.(*ParasiteData).Counter == data.Counter {
-					continue
-				}
 			}
 			r.Value = data
 			(*tui.db)[data.Key] = r.Next()

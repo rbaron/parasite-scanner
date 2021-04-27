@@ -14,17 +14,28 @@ type MQTTParasiteConfig struct {
 	TemperatureTopic    string `yaml:"temperature_topic"`
 	HumidityTopic       string `yaml:"humidity_topic"`
 	BatteryVoltageTopic string `yaml:"battery_voltage_topic"`
+	RSSITopic           string `yaml:"rssi_topic"`
+}
+
+type MQTTConfig struct {
+	Host          string                          `yaml:"host"`
+	Username      string                          `yaml:"username"`
+	Password      string                          `yaml:"password"`
+	ClientId      string                          `yaml:"client_id"`
+	AutoDiscovery bool                            `yaml:"auto_discovery"`
+	Registry      map[MACAddr]*MQTTParasiteConfig `yaml:"registry"`
+}
+
+type BLEConfig struct {
+	MacOS struct {
+		InferMACAddress  bool   `yaml:"infer_mac_address"`
+		MACAddressPrefix string `yaml:"mac_address_prefix"`
+	} `yaml:"macos"`
 }
 
 type Config struct {
-	MQTT struct {
-		Host          string                          `yaml:"host"`
-		Username      string                          `yaml:"username"`
-		Password      string                          `yaml:"password"`
-		ClientId      string                          `yaml:"client_id"`
-		AutoDiscovery bool                            `yaml:"auto_discovery"`
-		Registry      map[MACAddr]*MQTTParasiteConfig `yaml:"registry"`
-	} `yaml:"mqtt"`
+	MQTT MQTTConfig `yaml:"mqtt"`
+	BLE  BLEConfig
 }
 
 func ValidateMQTTParasiteConfig(cfg *MQTTParasiteConfig) error {

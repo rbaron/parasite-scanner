@@ -4,3 +4,6 @@ parasite-scanner
 # Editor
 *.swp
 .vscode
+
+# Logging
+*.log
