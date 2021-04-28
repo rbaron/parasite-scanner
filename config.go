@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -10,11 +11,33 @@ import (
 type MACAddr string
 
 type MQTTParasiteConfig struct {
-	SoilMoistureTopic   string `yaml:"soil_moisture_topic"`
-	TemperatureTopic    string `yaml:"temperature_topic"`
-	HumidityTopic       string `yaml:"humidity_topic"`
-	BatteryVoltageTopic string `yaml:"battery_voltage_topic"`
-	RSSITopic           string `yaml:"rssi_topic"`
+	Name string `yaml:"name"`
+}
+
+const kBaseMQTTTopic string = "parasite-scanner/sensor/%s_%s/state"
+
+func (cfg *MQTTParasiteConfig) NormalizedName() string {
+	return strings.Replace(strings.ToLower(cfg.Name), " ", "_", -1)
+}
+
+func (cfg *MQTTParasiteConfig) SoilMoistureTopic() string {
+	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "soil_moisture")
+}
+
+func (cfg *MQTTParasiteConfig) TemperatureTopic() string {
+	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "temperature")
+}
+
+func (cfg *MQTTParasiteConfig) HumidityTopic() string {
+	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "humidity")
+}
+
+func (cfg *MQTTParasiteConfig) BatteryVoltageTopic() string {
+	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "battery_voltage")
+}
+
+func (cfg *MQTTParasiteConfig) RSSITopic() string {
+	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "rssi")
 }
 
 type MQTTConfig struct {
@@ -39,14 +62,8 @@ type Config struct {
 }
 
 func ValidateMQTTParasiteConfig(cfg *MQTTParasiteConfig) error {
-	if cfg.SoilMoistureTopic == "" {
-		return fmt.Errorf("missing soil_moisture_topic")
-	} else if cfg.TemperatureTopic == "" {
-		return fmt.Errorf("missing temperature_topic")
-	} else if cfg.HumidityTopic == "" {
-		return fmt.Errorf("missing humidity_topic")
-	} else if cfg.BatteryVoltageTopic == "" {
-		return fmt.Errorf("missing battery_voltage_topic")
+	if cfg.Name == "" {
+		return fmt.Errorf("missing name")
 	}
 	return nil
 }

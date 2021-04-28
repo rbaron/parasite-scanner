@@ -6,17 +6,19 @@ mqtt:
   auto_discovery: true
   registry:
     "f0:ca:f0:ca:00:08":
-      soil_moisture_topic: home/parasite-scanner/08/soil_moisture
-      temperature_topic: home/parasite-scanner/08/temperature
-      humidity_topic: home/parasite-scanner/08/humidity
-      battery_voltage_topic: home/parasite-scanner/08/battery_voltage
-      rssi_topic: home/parasite-scanner/08/rssi
+      name: "Test Office Desk"
+      # soil_moisture_topic: home/parasite-scanner/08/soil_moisture
+      # temperature_topic: home/parasite-scanner/08/temperature
+      # humidity_topic: home/parasite-scanner/08/humidity
+      # battery_voltage_topic: home/parasite-scanner/08/battery_voltage
+      # rssi_topic: home/parasite-scanner/08/rssi
     "721e9484-ecc1-4ef1-8d56-8f68f8cb38b6":
-      soil_moisture_topic: home/parasite-scanner/08/soil_moisture
-      temperature_topic: home/parasite-scanner/08/temperature
-      humidity_topic: home/parasite-scanner/08/humidity
-      battery_voltage_topic: home/parasite-scanner/08/battery_voltage
-      rssi_topic: home/parasite-scanner/08/rssi
+      name: "Test Office Desk"
+    #   soil_moisture_topic: home/parasite-scanner/08/soil_moisture
+    #   temperature_topic: home/parasite-scanner/08/temperature
+    #   humidity_topic: home/parasite-scanner/08/humidity
+    #   battery_voltage_topic: home/parasite-scanner/08/battery_voltage
+    #   rssi_topic: home/parasite-scanner/08/rssi
 ble:
   macos:
     infer_mac_address: false

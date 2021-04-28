@@ -237,7 +237,7 @@ func plotRecentData(plot *widgets.Plot, r *ring.Ring, getter func(datapoint *Par
 }
 
 func DumpDB(db *DB) {
-	fmt.Println("Dumping DB:")
+	logger.Println("Dumping DB:")
 	keys := make([]string, 0)
 	for k, _ := range *db {
 		keys = append(keys, k)
@@ -246,7 +246,7 @@ func DumpDB(db *DB) {
 
 	for _, k := range keys {
 		var last = (*db)[k].Prev().Value.(*ParasiteData)
-		fmt.Println(last)
+		logger.Println(last)
 	}
-	fmt.Println("-----------------------------")
+	logger.Println("-----------------------------")
 }
