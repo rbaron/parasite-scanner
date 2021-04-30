@@ -26,6 +26,9 @@ type Widgets struct {
 	table          *widgets.Table
 }
 
+// TUI is a "Terminal User Interface".
+// It implements the DataSubscriber interface, and will re-render whenever new data
+// arrives, or when user input is detected.
 type TUI struct {
 	dataChan         chan *ParasiteData
 	seenKeys         []string
@@ -198,7 +201,10 @@ func (tui *TUI) Run() {
 			tui.Render()
 		}
 	}
+}
 
+func (tui *TUI) Ingest(data *ParasiteData) {
+	tui.dataChan <- data
 }
 
 func (tui *TUI) Render() {

@@ -10,35 +10,12 @@ import (
 
 const kMacOSMACAddrPrefix = "f0:ca:f0:ca:"
 
-type ParasiteData struct {
-	Key            string
-	Counter        uint8
-	BatteryVoltage float32
-	TempCelcius    float32
-	Humidity       float32
-	SoilMoisture   float32
-	Time           time.Time
-	RSSI           int
-}
-
 type ParasiteScanner struct {
 	// We use a wrap-around counter inside the advertisement payload for
 	// deduplicating messages.
 	lastCounter map[string]int
 	channel     chan *ParasiteData
 	cfg         *BLEConfig
-}
-
-func (pd ParasiteData) String() string {
-	return fmt.Sprintf(
-		"%s | soil: %5.1f%% | batt: %3.1fV | temp: %4.1fC | humi: %5.1f%% | %6.1fs ago | counter: %d",
-		pd.Key,
-		pd.SoilMoisture,
-		pd.BatteryVoltage,
-		pd.TempCelcius,
-		pd.Humidity,
-		time.Since(pd.Time).Seconds(),
-		pd.Counter)
 }
 
 func MakeParasiteScanner(cfg *BLEConfig) *ParasiteScanner {

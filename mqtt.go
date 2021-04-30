@@ -7,6 +7,8 @@ import (
 	mqtt "github.com/eclipse/paho.mqtt.golang"
 )
 
+// MQTTClient implements the DataSubscriber interface.
+// It will prepate and publish incoming data to their respective MQTT topics.
 type MQTTClient struct {
 	client   mqtt.Client
 	outgoing chan *ParasiteData
@@ -39,13 +41,13 @@ type AutoDiscoveryDeviceInfo struct {
 }
 
 type AutoDiscoveryPayload struct {
-	DeviceClass       string                  `json:"device_class"`
-	UnitOfMeasument   string                  `json:"unit_of_measurement"`
-	Name              string                  `json:"name"`
-	StateTopic        string                  `json:"state_topic"`
-	AvailabilityTopic string                  `json:"availability_topic"`
-	UniqueID          string                  `json:"unique_id"`
-	Device            AutoDiscoveryDeviceInfo `json:"device"`
+	DeviceClass       string                   `json:"device_class"`
+	UnitOfMeasument   string                   `json:"unit_of_measurement"`
+	Name              string                   `json:"name"`
+	StateTopic        string                   `json:"state_topic"`
+	AvailabilityTopic string                   `json:"availability_topic"`
+	UniqueID          string                   `json:"unique_id"`
+	Device            *AutoDiscoveryDeviceInfo `json:"device"`
 }
 
 type AutoDiscoveryMsg struct {
@@ -54,6 +56,11 @@ type AutoDiscoveryMsg struct {
 }
 
 func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscoveryMsg {
+	device := &AutoDiscoveryDeviceInfo{
+		Identifiers:  "parasite-scanner",
+		Name:         "parasite-scanner",
+		Manufacturer: "rbaron",
+	}
 	return []*AutoDiscoveryMsg{
 		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_soil_moisture/config", deviceConfig.NormalizedName()),
 			Payload: AutoDiscoveryPayload{
@@ -63,11 +70,7 @@ func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscover
 				StateTopic:        deviceConfig.SoilMoistureTopic(),
 				UniqueID:          fmt.Sprintf("%s_soil_moisture", deviceConfig.NormalizedName()),
 				AvailabilityTopic: "parasite-scanner/status",
-				Device: AutoDiscoveryDeviceInfo{
-					Identifiers:  "parasite-scanner",
-					Name:         "parasite-scanner",
-					Manufacturer: "rbaron",
-				},
+				Device:            device,
 			}},
 		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_temperature/config", deviceConfig.NormalizedName()),
 			Payload: AutoDiscoveryPayload{
@@ -77,11 +80,7 @@ func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscover
 				StateTopic:        deviceConfig.TemperatureTopic(),
 				UniqueID:          fmt.Sprintf("%s_temperature", deviceConfig.NormalizedName()),
 				AvailabilityTopic: "parasite-scanner/status",
-				Device: AutoDiscoveryDeviceInfo{
-					Identifiers:  "parasite-scanner",
-					Name:         "parasite-scanner",
-					Manufacturer: "rbaron",
-				},
+				Device:            device,
 			}},
 		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_humidity/config", deviceConfig.NormalizedName()),
 			Payload: AutoDiscoveryPayload{
@@ -91,25 +90,17 @@ func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscover
 				StateTopic:        deviceConfig.HumidityTopic(),
 				UniqueID:          fmt.Sprintf("%s_humidity", deviceConfig.NormalizedName()),
 				AvailabilityTopic: "parasite-scanner/status",
-				Device: AutoDiscoveryDeviceInfo{
-					Identifiers:  "parasite-scanner",
-					Name:         "parasite-scanner",
-					Manufacturer: "rbaron",
-				},
+				Device:            device,
 			}},
 		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_battery_voltage/config", deviceConfig.NormalizedName()),
 			Payload: AutoDiscoveryPayload{
-				DeviceClass:       "battery",
+				DeviceClass:       "voltage",
 				UnitOfMeasument:   "V",
 				Name:              fmt.Sprintf("%s Battery Voltage", deviceConfig.Name),
 				StateTopic:        deviceConfig.BatteryVoltageTopic(),
 				UniqueID:          fmt.Sprintf("%s_battery_voltage", deviceConfig.NormalizedName()),
 				AvailabilityTopic: "parasite-scanner/status",
-				Device: AutoDiscoveryDeviceInfo{
-					Identifiers:  "parasite-scanner",
-					Name:         "parasite-scanner",
-					Manufacturer: "rbaron",
-				},
+				Device:            device,
 			}},
 		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_rssi/config", deviceConfig.NormalizedName()),
 			Payload: AutoDiscoveryPayload{
@@ -119,11 +110,7 @@ func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscover
 				StateTopic:        deviceConfig.RSSITopic(),
 				UniqueID:          fmt.Sprintf("%s_rssi", deviceConfig.NormalizedName()),
 				AvailabilityTopic: "parasite-scanner/status",
-				Device: AutoDiscoveryDeviceInfo{
-					Identifiers:  "parasite-scanner",
-					Name:         "parasite-scanner",
-					Manufacturer: "rbaron",
-				},
+				Device:            device,
 			}},
 	}
 }
@@ -139,6 +126,10 @@ func (client *MQTTClient) publishData(deviceConfig *MQTTParasiteConfig, data *Pa
 func (client *MQTTClient) Publish(topic string, msg string, retained bool, qos byte) mqtt.Token {
 	logger.Printf("[mqtt] Publishing %s to %s\n", msg, topic)
 	return client.client.Publish(topic, qos, retained, msg)
+}
+
+func (client *MQTTClient) Ingest(data *ParasiteData) {
+	client.outgoing <- data
 }
 
 func (client *MQTTClient) Run() {
