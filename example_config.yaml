@@ -3,23 +3,36 @@ mqtt:
   username: mqttuser
   password: mqttpassword
   client_id: parasite-scanner
+  # If `auto_discovery` is enabled, an MQTT message will be published (retained)
+  # to the homeassistant/sensor/parasite-scanner/<sensor_name_and_type>/config,
+  # so it's automatically discoverable by Home Assistant (according to
+  # https://www.home-assistant.io/docs/mqtt/discovery/).
   auto_discovery: true
+  # `registry` maps MAC addresses to devices' MQTT configuration. For now, the only
+  # configuration is `name`, and the MQTT topics will be derived from it.
+  # For example, for a device with name "Office parasite", the following topics will
+  # be derived:
+  # - parasite-scanner/sensor/office_parasite_soil_moisture/state
+  # - parasite-scanner/sensor/office_parasite_temperature/state
+  # - parasite-scanner/sensor/office_parasite_humidity/state
+  # - parasite-scanner/sensor/office_parasite_battery_voltage/state
+  # - parasite-scanner/sensor/office_parasite_rssi/state
   registry:
-    "f0:ca:f0:ca:00:08":
-      name: "Test Office Desk"
-      # soil_moisture_topic: home/parasite-scanner/08/soil_moisture
-      # temperature_topic: home/parasite-scanner/08/temperature
-      # humidity_topic: home/parasite-scanner/08/humidity
-      # battery_voltage_topic: home/parasite-scanner/08/battery_voltage
-      # rssi_topic: home/parasite-scanner/08/rssi
-    "721e9484-ecc1-4ef1-8d56-8f68f8cb38b6":
-      name: "Test Office Desk"
-    #   soil_moisture_topic: home/parasite-scanner/08/soil_moisture
-    #   temperature_topic: home/parasite-scanner/08/temperature
-    #   humidity_topic: home/parasite-scanner/08/humidity
-    #   battery_voltage_topic: home/parasite-scanner/08/battery_voltage
-    #   rssi_topic: home/parasite-scanner/08/rssi
+    "f0:ca:f0:ca:00:01":
+      name: "Office parasite"
+    "f0:ca:f0:ca:00:02":
+      name: "Lime tree"
 ble:
+  # macOS hides the real MAC address from BLE peripherals, and instead assign
+  # discovered devices a UUID. This UUID is not guaranteed to be stable, but
+  # in practice it doesn't seem to change frequently, so you could find this
+  # UUID and use it in place of the MAC address.
+  # As an alternative, b-parasite encodes the two least significant bytes of its
+  # MAC address in the BLE advertisement packet itself, so we can use that to
+  # infer the whole real MAC address, if we agree on the MAC address prefix
+  # (the other 4, most significant bytes).
+  # On Linux, none of this is necessary, since we have access to the real MAC
+  # addresses of peripherals.
   macos:
     infer_mac_address: false
     mac_address_prefix: "f0:ca:f0:ca"

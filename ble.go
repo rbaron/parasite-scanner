@@ -52,7 +52,7 @@ func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
 		if len(serviceData) >= 12 {
 			lsb1 := serviceData[10]
 			lsb0 := serviceData[11]
-			return fmt.Sprintf("%s:%02d:%02d", cfg.MacOS.MACAddressPrefix, lsb1, lsb0)
+			return fmt.Sprintf("%s:%02x:%02x", cfg.MacOS.MACAddressPrefix, lsb1, lsb0)
 		}
 		return addr
 	}

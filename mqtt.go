@@ -148,6 +148,7 @@ func (client *MQTTClient) Run() {
 	}
 
 	for data := range client.outgoing {
+		logger.Println("WILL PRINT", data)
 		deviceConfig, exists := client.config.Registry[MACAddr(data.Key)]
 		if !exists {
 			logger.Printf("Received valid BLE broadcast from %s, but it's not configured for MQTT\n", data.Key)

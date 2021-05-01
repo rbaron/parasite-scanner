@@ -5,11 +5,12 @@ import (
 )
 
 var showUI = flag.Bool("ui", false, "renders a terminal-based ui for iteractive use")
+var configFile = flag.String("config", "config.yaml", "YAML config filename")
 
 func main() {
 	flag.Parse()
 
-	config, err := ParseConfig("example_config.yaml")
+	config, err := ParseConfig(*configFile)
 	if err != nil {
 		panic("unable to parse config file: " + err.Error())
 	}
