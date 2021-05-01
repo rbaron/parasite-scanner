@@ -6,3 +6,11 @@
 
 # Home Assistant
 - [Available device classes](https://www.home-assistant.io/integrations/sensor#device-class) for the `sensor` component
+
+# Replacing tinygo-org/bluetooth with a custom fork
+Assuming you want to replace the original module with the tip of the `release` branch of your fork:
+```
+replace tinygo.org/x/bluetooth v0.3.0 => github.com/rbaron/bluetooth release
+```
+
+Upon calling `go build`, the line will be replaced with a new pseudo-version.

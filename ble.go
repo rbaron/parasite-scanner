@@ -103,6 +103,7 @@ func (scanner *ParasiteScanner) Run() {
 			} else {
 				// Have we processed this data already?
 				if oldCounter, exists := scanner.lastCounter[data.Key]; exists && oldCounter == int(data.Counter) {
+					logger.Println("[ble] Skipping already processed data (based on counter):", data)
 					return
 				}
 				scanner.lastCounter[data.Key] = int(data.Counter)
