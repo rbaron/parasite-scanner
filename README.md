@@ -66,7 +66,7 @@ ble:
 ```
 
 # UI
-Normally, `parasite-scanner` will run in the background, continuously listening for interesting BLE data and being silently succesful on its job.
+Normally, `parasite-scanner` will run in the background, continuously listening for interesting BLE data and being silently successful on its job.
 
 By using the `-ui` command line switch, it will render a terminal-based UI that is helpful for debugging, besides looking super cool. It will automatically discover BLE advertisements that look like b-parasite data and plot them over time. You can type `j` and `k` to scroll through the different discovered b-parasites. In this mode, log messages that would normally go to `stdout` will be redirected to the `parasite-scanner.log` file.
 
@@ -75,16 +75,27 @@ In the sped up recording below, you can see a total of 9 devices being discovere
 
 # Installation
 ## Build from source
+Requires Go >= 1.13
 ```bash
-$ git clone
+$ git clone git@github.com:rbaron/parasite-scanner
+$ cd parasite-scanner
+$ go build .
 ```
 
 # Usage
 ```bash
-$ parasite-scanner -help
+$ ./parasite-scanner -help
 Usage of ./parasite-scanner:
   -config string
     	YAML config filename (default "config.yaml")
   -ui
     	renders a terminal-based ui for iteractive use
+
+$ ./parasite-scanner -config example-config.yaml
 ```
+
+# Alternative, ESP32-Based Bridge
+While `parasite-scanner` is aimed at Linux & macOS, another b-parasite BLE-MQTT bridge exists for the beloved [ESP32](https://www.espressif.com/en/products/socs/esp32) microcontroller.
+
+
+Support for b-parasite [has been merged into ESPHome](https://github.com/esphome/esphome/pull/1666), a battle-tested, flexible firmware for the ESP32 family. The `b_parasite` platform turns a ESP32 into a BLE-MQTT bridge for b-parasites.
