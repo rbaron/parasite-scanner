@@ -82,10 +82,14 @@ func ParseConfig(filename string) (*Config, error) {
 		return nil, err
 	}
 
-	for mac_addr, mqtt_cfg := range config.MQTT.Registry {
-		if err := ValidateMQTTParasiteConfig(mqtt_cfg); err != nil {
-			return nil, fmt.Errorf("%s: %s", mac_addr, err.Error())
+	for macAddr, mqttCfg := range config.MQTT.Registry {
+		if err := ValidateMQTTParasiteConfig(mqttCfg); err != nil {
+			return nil, fmt.Errorf("%s: %s", macAddr, err.Error())
 		}
+		// Normalize MAC address (to lowercase).
+		delete(config.MQTT.Registry, macAddr)
+		normalizedMACAddr := strings.ToLower(string(macAddr))
+		config.MQTT.Registry[MACAddr(normalizedMACAddr)] = mqttCfg
 	}
 	return config, nil
 }

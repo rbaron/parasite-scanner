@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/binary"
 	"fmt"
+	"strings"
 	"time"
 
 	"tinygo.org/x/bluetooth"
@@ -35,7 +36,7 @@ func MakeParasiteScanner(cfg *BLEConfig) *ParasiteScanner {
 // To get around this, p-parasite encodes its own MAC addresses
 // in its advertisement data, which we try to pull here.
 func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
-	addr := scanResult.Address.String()
+	addr := strings.ToLower(scanResult.Address.String())
 	if !cfg.MacOS.InferMACAddress {
 		return addr
 	}
