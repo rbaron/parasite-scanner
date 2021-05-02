@@ -32,9 +32,8 @@ func MakeParasiteScanner(cfg *BLEConfig) *ParasiteScanner {
 // On Linux, that works well and that's what we use.
 // On macOS, scanned devices' MAC addresses are hidden for privacy
 // reasons, and the API only returns an UUID for us instead.
-// To get around this, I encoded the last two bytes of parasites'
-// MAC addresses in their advertisement data, so we can sort of
-// infer the whole MAC address if we assume the leading bytes.
+// To get around this, p-parasite encodes its own MAC addresses
+// in its advertisement data, which we try to pull here.
 func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
 	addr := scanResult.Address.String()
 	if !cfg.MacOS.InferMACAddress {
@@ -49,12 +48,12 @@ func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
 	} else {
 		// macOS - we try to read the MAC address from the payload data.
 		serviceData := scanResult.AdvertisementPayload.GetServiceDatas()[0].Data
-		if len(serviceData) >= 12 {
-			lsb1 := serviceData[10]
-			lsb0 := serviceData[11]
-			return fmt.Sprintf("%s:%02x:%02x", cfg.MacOS.MACAddressPrefix, lsb1, lsb0)
+		if len(serviceData) < 16 {
+			logger.Printf("[ble] Unable to infer MAC address from %s\n", addr)
+			return addr
 		}
-		return addr
+		macAddr := serviceData[10:16]
+		return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x", macAddr[0], macAddr[1], macAddr[2], macAddr[3], macAddr[4], macAddr[5])
 	}
 }
 

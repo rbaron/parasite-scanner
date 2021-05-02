@@ -25,14 +25,12 @@ mqtt:
 ble:
   # macOS hides the real MAC address from BLE peripherals, and instead assign
   # discovered devices a UUID. This UUID is not guaranteed to be stable, but
-  # in practice it doesn't seem to change frequently, so you could find this
+  # in practice it doesn't seem to change frequently. You could find this
   # UUID and use it in place of the MAC address.
-  # As an alternative, b-parasite encodes the two least significant bytes of its
-  # MAC address in the BLE advertisement packet itself, so we can use that to
-  # infer the whole real MAC address, if we agree on the MAC address prefix
-  # (the other 4, most significant bytes).
+  # As an alternative, b-parasite encodes its own MAC address in its BLE
+  # advertisement packet, so we can use that data instead. This is what happens
+  # when `infer_mac_address` is set to `true`.
   # On Linux, none of this is necessary, since we have access to the real MAC
   # addresses of peripherals.
   macos:
     infer_mac_address: false
-    mac_address_prefix: "f0:ca:f0:ca"
