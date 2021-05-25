@@ -147,7 +147,7 @@ func (client *MQTTClient) Run() {
 		}
 	}
 
-	client.Publish("parasite-scanner/status", "online", false, 1) //publish online status
+	client.Publish("parasite-scanner/status", "online", false, 1)
 
 	for data := range client.outgoing {
 		deviceConfig, exists := client.config.Registry[MACAddr(data.Key)]
