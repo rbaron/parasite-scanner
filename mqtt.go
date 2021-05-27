@@ -21,7 +21,8 @@ func MakeMQTTClient(cfg *MQTTConfig) *MQTTClient {
 		AddBroker(cfg.Host).
 		SetUsername(cfg.Username).
 		SetPassword(cfg.Password).
-		SetClientID(cfg.ClientId)
+		SetClientID(cfg.ClientId).
+		SetWill("parasite-scanner/status", "offline", 1, false)
 
 	// opts.SetKeepAlive(1 * time.Second)
 	// opts.SetPingTimeout(1 * time.Second)
