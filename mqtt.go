@@ -21,7 +21,8 @@ func MakeMQTTClient(cfg *MQTTConfig) *MQTTClient {
 		AddBroker(cfg.Host).
 		SetUsername(cfg.Username).
 		SetPassword(cfg.Password).
-		SetClientID(cfg.ClientId)
+		SetClientID(cfg.ClientId).
+		SetWill("parasite-scanner/status", "offline", 1, false)
 
 	// opts.SetKeepAlive(1 * time.Second)
 	// opts.SetPingTimeout(1 * time.Second)
@@ -146,6 +147,8 @@ func (client *MQTTClient) Run() {
 			}
 		}
 	}
+
+	client.Publish("parasite-scanner/status", "online", true, 1)
 
 	for data := range client.outgoing {
 		deviceConfig, exists := client.config.Registry[MACAddr(data.Key)]
