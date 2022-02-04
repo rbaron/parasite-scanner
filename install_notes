@@ -1,0 +1,30 @@
+## Setup pi user
+sudo setcap cap_net_admin+ep parasite-scanner
+sudo usermod -aG bluetooth pi
+
+## Create service
+
+sudo vi /etc/systemd/system/parasite-scanner.service
+
+## Add below
+
+[Unit]
+Description=parasite-scanner
+Documentation=https://github.com/sysdigdan/parasite-scanner
+After=network-online.target
+
+[Service]
+User=pi
+Restart=on-failure
+WorkingDirectory=/opt/parasite-scanner
+ExecStartPre=/bin/sleep 15
+ExecStart=/opt/parasite-scanner/parasite-scanner
+
+[Install]
+WantedBy=multi-user.target
+
+## Setup Service
+
+sudo systemctl enable parasite-scanner
+sudo systemctl start parasite-scanner
+sudo systemctl status parasite-scanne

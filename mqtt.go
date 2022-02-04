@@ -13,9 +13,10 @@ type MQTTClient struct {
 	client   mqtt.Client
 	outgoing chan *ParasiteData
 	config   *MQTTConfig
+	device   *DEVICEConfig
 }
 
-func MakeMQTTClient(cfg *MQTTConfig) *MQTTClient {
+func MakeMQTTClient(device *DEVICEConfig, cfg *MQTTConfig) *MQTTClient {
 	opts := mqtt.
 		NewClientOptions().
 		AddBroker(cfg.Host).
@@ -32,6 +33,7 @@ func MakeMQTTClient(cfg *MQTTConfig) *MQTTClient {
 		client:   client,
 		outgoing: make(chan *ParasiteData),
 		config:   cfg,
+		device:   device,
 	}
 }
 
@@ -56,23 +58,13 @@ type AutoDiscoveryMsg struct {
 	Payload AutoDiscoveryPayload
 }
 
-func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscoveryMsg {
+func makeAutoDiscoveryMessages(deviceConfig *ParasiteConfig) []*AutoDiscoveryMsg {
 	device := &AutoDiscoveryDeviceInfo{
 		Identifiers:  "parasite-scanner",
 		Name:         "parasite-scanner",
 		Manufacturer: "rbaron",
 	}
 	return []*AutoDiscoveryMsg{
-		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_soil_moisture/config", deviceConfig.NormalizedName()),
-			Payload: AutoDiscoveryPayload{
-				DeviceClass:       "humidity",
-				UnitOfMeasument:   "%",
-				Name:              fmt.Sprintf("%s Soil Moisture", deviceConfig.Name),
-				StateTopic:        deviceConfig.SoilMoistureTopic(),
-				UniqueID:          fmt.Sprintf("%s_soil_moisture", deviceConfig.NormalizedName()),
-				AvailabilityTopic: "parasite-scanner/status",
-				Device:            device,
-			}},
 		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_temperature/config", deviceConfig.NormalizedName()),
 			Payload: AutoDiscoveryPayload{
 				DeviceClass:       "temperature",
@@ -90,6 +82,16 @@ func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscover
 				Name:              fmt.Sprintf("%s Humidity", deviceConfig.Name),
 				StateTopic:        deviceConfig.HumidityTopic(),
 				UniqueID:          fmt.Sprintf("%s_humidity", deviceConfig.NormalizedName()),
+				AvailabilityTopic: "parasite-scanner/status",
+				Device:            device,
+			}},
+		{Topic: fmt.Sprintf("homeassistant/sensor/parasite-scanner/%s_battery_percentage/config", deviceConfig.NormalizedName()),
+			Payload: AutoDiscoveryPayload{
+				DeviceClass:       "percentage",
+				UnitOfMeasument:   "%",
+				Name:              fmt.Sprintf("%s Battery Percentage", deviceConfig.Name),
+				StateTopic:        deviceConfig.BatteryPercentageTopic(),
+				UniqueID:          fmt.Sprintf("%s_battery_percentage", deviceConfig.NormalizedName()),
 				AvailabilityTopic: "parasite-scanner/status",
 				Device:            device,
 			}},
@@ -116,10 +118,10 @@ func makeAutoDiscoveryMessages(deviceConfig *MQTTParasiteConfig) []*AutoDiscover
 	}
 }
 
-func (client *MQTTClient) publishData(deviceConfig *MQTTParasiteConfig, data *ParasiteData) {
-	client.Publish(deviceConfig.SoilMoistureTopic(), fmt.Sprintf("%.1f", data.SoilMoisture), false, 1)
+func (client *MQTTClient) publishData(deviceConfig *ParasiteConfig, data *ParasiteData) {
 	client.Publish(deviceConfig.TemperatureTopic(), fmt.Sprintf("%.1f", data.TempCelcius), false, 1)
 	client.Publish(deviceConfig.HumidityTopic(), fmt.Sprintf("%.1f", data.Humidity), false, 1)
+	client.Publish(deviceConfig.BatteryPercentageTopic(), fmt.Sprintf("%.1f", data.BatteryPercentage), false, 1)
 	client.Publish(deviceConfig.BatteryVoltageTopic(), fmt.Sprintf("%.1f", data.BatteryVoltage), false, 1)
 	client.Publish(deviceConfig.RSSITopic(), fmt.Sprintf("%d", data.RSSI), false, 1)
 }
@@ -139,8 +141,8 @@ func (client *MQTTClient) Run() {
 	}
 
 	if client.config.AutoDiscovery {
-		for macAddr, deviceConfig := range client.config.Registry {
-			logger.Printf("Generating auto-discovery messages for %s\n", macAddr)
+		for macAddr, deviceConfig := range client.device.Registry {
+			logger.Printf("[mqtt] Generating auto-discovery messages for %s\n", macAddr)
 			for _, msg := range makeAutoDiscoveryMessages(deviceConfig) {
 				payload, _ := json.Marshal(msg.Payload)
 				client.Publish(msg.Topic, string(payload), true, 1)
@@ -151,9 +153,9 @@ func (client *MQTTClient) Run() {
 	client.Publish("parasite-scanner/status", "online", true, 1)
 
 	for data := range client.outgoing {
-		deviceConfig, exists := client.config.Registry[MACAddr(data.Key)]
+		deviceConfig, exists := client.device.Registry[MACAddr(data.Key)]
 		if !exists {
-			logger.Printf("Received valid BLE broadcast from %s, but it's not configured for MQTT\n", data.Key)
+			logger.Printf("[mqtt] Received valid BLE broadcast from %s, but it's not configured for MQTT\n", data.Key)
 			continue
 		}
 		client.publishData(deviceConfig, data)

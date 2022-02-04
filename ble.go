@@ -58,6 +58,14 @@ func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
 	}
 }
 
+func decodeSign(i uint16) int {
+	if i < 32768 {
+		return int(i)
+	} else {
+		return int(i) - 65536
+	}
+}
+
 func parseParasiteData(cfg *BLEConfig, scanResult bluetooth.ScanResult) (*ParasiteData, error) {
 	if len(scanResult.AdvertisementPayload.GetServiceDatas()) != 1 {
 		return nil, fmt.Errorf("unexpected length of service datas")
@@ -70,21 +78,15 @@ func parseParasiteData(cfg *BLEConfig, scanResult bluetooth.ScanResult) (*Parasi
 		return nil, fmt.Errorf("invalid service data uuid: %s", uuid)
 	}
 
-	counter := serviceData.Data[1] & 0x0f
-	batteryVoltage := binary.BigEndian.Uint16(serviceData.Data[2:4])
-	tempCelcius := binary.BigEndian.Uint16(serviceData.Data[4:6])
-	humidity := binary.BigEndian.Uint16(serviceData.Data[6:8])
-	soilMoisture := binary.BigEndian.Uint16(serviceData.Data[8:10])
-
 	return &ParasiteData{
-		Key:            getKey(cfg, &scanResult),
-		Counter:        counter,
-		BatteryVoltage: float32(batteryVoltage) / 1000,
-		TempCelcius:    float32(tempCelcius) / 1000,
-		Humidity:       100 * float32(humidity) / (1 << 16),
-		SoilMoisture:   100 * float32(soilMoisture) / (1 << 16),
-		Time:           time.Now(),
-		RSSI:           int(scanResult.RSSI),
+		Key:               getKey(cfg, &scanResult),
+		Counter:           serviceData.Data[12] & 0x0f,
+		BatteryPercentage: float64(serviceData.Data[9]),
+		BatteryVoltage:    float64(binary.BigEndian.Uint16(serviceData.Data[10:12])) / 1000.0,
+		TempCelcius:       float64(decodeSign(binary.BigEndian.Uint16(serviceData.Data[6:8]))) / 10.0,
+		Humidity:          float64(serviceData.Data[8]),
+		Time:              time.Now(),
+		RSSI:              int(scanResult.RSSI),
 	}, nil
 }
 
@@ -96,10 +98,10 @@ func (scanner *ParasiteScanner) Run() {
 	}
 
 	err := adapter.Scan(func(adapter *bluetooth.Adapter, scanResult bluetooth.ScanResult) {
-		if scanResult.LocalName() == "prst" {
+		if strings.HasPrefix(scanResult.Address.String(), scanner.cfg.VendorPrefix) {
 			data, err := parseParasiteData(scanner.cfg, scanResult)
 			if err != nil {
-				logger.Println("error parsing parasite data:", err.Error())
+				logger.Println("[ble] Error parsing parasite data:", err.Error())
 			} else {
 				// Have we processed this data already?
 				if oldCounter, exists := scanner.lastCounter[data.Key]; exists && oldCounter == int(data.Counter) {
