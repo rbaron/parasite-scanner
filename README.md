@@ -35,6 +35,22 @@ mqtt:
   # so it's automatically discoverable by Home Assistant (according to
   # https://www.home-assistant.io/docs/mqtt/discovery/).
   auto_discovery: true
+prometheus:
+    host: 0.0.0.0:9265
+ble:
+  vendor_prefix: A4:C1:38
+  # macOS hides the real MAC address from BLE peripherals, and instead assign
+  # discovered devices a UUID. This UUID is not guaranteed to be stable, but
+  # in practice it doesn't seem to change frequently. You could find this
+  # UUID and use it in place of the MAC address.
+  # As an alternative, b-parasite encodes its own MAC address in its BLE
+  # advertisement packet, so we can use that data instead. This is what happens
+  # when `infer_mac_address` is set to `true`.
+  # On Linux, none of this is necessary, since we have access to the real MAC
+  # addresses of peripherals.
+  macos:
+    infer_mac_address: false
+device:
   # `registry` maps MAC addresses to devices' MQTT configuration. For now, the only
   # configuration is `name`, and the MQTT topics will be derived from it.
   # For example, for a device with name "Office parasite", the following topics will
@@ -49,18 +65,6 @@ mqtt:
       name: "Office Parasite"
     "f0:ca:f0:ca:f0:02":
       name: "Lime tree"
-ble:
-  # macOS hides the real MAC address from BLE peripherals, and instead assign
-  # discovered devices a UUID. This UUID is not guaranteed to be stable, but
-  # in practice it doesn't seem to change frequently. You could find this
-  # UUID and use it in place of the MAC address.
-  # As an alternative, b-parasite encodes its own MAC address in its BLE
-  # advertisement packet, so we can use that data instead. This is what happens
-  # when `infer_mac_address` is set to `true`.
-  # On Linux, none of this is necessary, since we have access to the real MAC
-  # addresses of peripherals.
-  macos:
-    infer_mac_address: true
 ```
 
 # UI
@@ -77,7 +81,7 @@ Requires Go >= 1.13
 ```bash
 $ git clone git@github.com:rbaron/parasite-scanner
 $ cd parasite-scanner
-$ go build .
+$ GOOS=linux GOARCH=arm GOARM=7 go build -o parasite-scanner .
 ```
 
 # Usage

@@ -25,8 +25,11 @@ func main() {
 	if *showUI {
 		dataSubscribers = append(dataSubscribers, InitUI())
 	}
-	if config.MQTT.Host != "" {
-		dataSubscribers = append(dataSubscribers, MakeMQTTClient(&config.MQTT))
+	if config.MQTT.Host != "" && config.MQTT.Enable {
+		dataSubscribers = append(dataSubscribers, MakeMQTTClient(&config.DEVICE, &config.MQTT))
+	}
+	if config.PROM.Host != "" && config.PROM.Enable {
+		dataSubscribers = append(dataSubscribers, MakePROMExporter(&config.DEVICE, &config.PROM))
 	}
 
 	scanner := MakeParasiteScanner(&config.BLE)

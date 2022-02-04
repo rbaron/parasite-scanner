@@ -10,3 +10,9 @@ parasite-scanner
 
 # Config
 config.yaml
+
+# Vendor
+vendor
+
+# Other
+install_notes

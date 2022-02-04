@@ -16,14 +16,14 @@ const kHeaderHeight = 5
 type DB map[string]*ring.Ring
 
 type Widgets struct {
-	header         *widgets.Paragraph
-	help           *widgets.Paragraph
-	soilMoisture   *widgets.Plot
-	temp           *widgets.Plot
-	humidity       *widgets.Plot
-	batteryVoltage *widgets.Plot
-	rssi           *widgets.Plot
-	table          *widgets.Table
+	header            *widgets.Paragraph
+	help              *widgets.Paragraph
+	temp              *widgets.Plot
+	humidity          *widgets.Plot
+	batteryPercentage *widgets.Plot
+	batteryVoltage    *widgets.Plot
+	rssi              *widgets.Plot
+	table             *widgets.Table
 }
 
 // TUI is a "Terminal User Interface".
@@ -63,14 +63,6 @@ func initWidgets() *Widgets {
 	help.Text = "j: next\nk: previous"
 	help.SetRect(100, 0, 200, kHeaderHeight)
 
-	soilMoistureChart := widgets.NewPlot()
-	soilMoistureChart.Title = "Soil Moisture (%)"
-	soilMoistureChart.Marker = widgets.MarkerDot
-	soilMoistureChart.SetRect(0, 0+kHeaderHeight, 100, 18+kHeaderHeight)
-	soilMoistureChart.DotMarkerRune = '+'
-	soilMoistureChart.LineColors[0] = ui.ColorBlue
-	soilMoistureChart.MaxVal = 100.
-
 	tempChart := widgets.NewPlot()
 	tempChart.Title = "Temperature (C)"
 	tempChart.Marker = widgets.MarkerDot
@@ -92,12 +84,19 @@ func initWidgets() *Widgets {
 	rssiChart.DotMarkerRune = '+'
 	rssiChart.LineColors[0] = ui.ColorWhite
 
-	batteryChart := widgets.NewPlot()
-	batteryChart.Title = "Battery Voltage (V)"
-	batteryChart.Marker = widgets.MarkerDot
-	batteryChart.SetRect(100, 24+kHeaderHeight, 200, 36+kHeaderHeight)
-	batteryChart.DotMarkerRune = '+'
-	batteryChart.LineColors[0] = ui.ColorRed
+	batteryPercentageChart := widgets.NewPlot()
+	batteryPercentageChart.Title = "Battery Percentage (%)"
+	batteryPercentageChart.Marker = widgets.MarkerDot
+	batteryPercentageChart.SetRect(100, 24+kHeaderHeight, 200, 36+kHeaderHeight)
+	batteryPercentageChart.DotMarkerRune = '+'
+	batteryPercentageChart.LineColors[0] = ui.ColorRed
+
+	batteryVoltageChart := widgets.NewPlot()
+	batteryVoltageChart.Title = "Battery Voltage (V)"
+	batteryVoltageChart.Marker = widgets.MarkerDot
+	batteryVoltageChart.SetRect(100, 24+kHeaderHeight, 200, 36+kHeaderHeight)
+	batteryVoltageChart.DotMarkerRune = '+'
+	batteryVoltageChart.LineColors[0] = ui.ColorRed
 
 	table := widgets.NewTable()
 	table.Title = "Discovered b-parasites"
@@ -109,14 +108,14 @@ func initWidgets() *Widgets {
 	table.RowStyles[0] = ui.NewStyle(ui.ColorWhite, ui.ColorClear, ui.ModifierBold)
 
 	return &Widgets{
-		header:         header,
-		help:           help,
-		soilMoisture:   soilMoistureChart,
-		temp:           tempChart,
-		humidity:       humidityChart,
-		rssi:           rssiChart,
-		batteryVoltage: batteryChart,
-		table:          table,
+		header:            header,
+		help:              help,
+		temp:              tempChart,
+		humidity:          humidityChart,
+		rssi:              rssiChart,
+		batteryPercentage: batteryPercentageChart,
+		batteryVoltage:    batteryVoltageChart,
+		table:             table,
 	}
 }
 
@@ -126,22 +125,22 @@ func (tui *TUI) Close() {
 
 func (tui *TUI) refreshData() {
 	r := (*(tui.db))[tui.seenKeys[tui.selectedKeyIndex]]
-	plotRecentData(tui.widgets.soilMoisture, r, func(data *ParasiteData) float64 { return float64(data.SoilMoisture) })
 	plotRecentData(tui.widgets.temp, r, func(data *ParasiteData) float64 { return float64(data.TempCelcius) })
 	plotRecentData(tui.widgets.humidity, r, func(data *ParasiteData) float64 { return float64(data.Humidity) })
+	plotRecentData(tui.widgets.batteryPercentage, r, func(data *ParasiteData) float64 { return float64(data.BatteryPercentage) })
 	plotRecentData(tui.widgets.batteryVoltage, r, func(data *ParasiteData) float64 { return float64(data.BatteryVoltage) })
 	plotRecentData(tui.widgets.rssi, r, func(data *ParasiteData) float64 { return -float64(data.RSSI) })
 
 	table := tui.widgets.table
 	table.Rows = [][]string{}
-	table.Rows = [][]string{{"UUID", "Soil Moisture", "Temperature", "Humidity", "Battery Voltage", "RSSI", "Time"}}
+	table.Rows = [][]string{{"UUID", "Temperature", "Humidity", "Battery Percentage", "Battery Voltage", "RSSI", "Time"}}
 	for i, k := range tui.seenKeys {
 		var last = (*tui.db)[k].Prev().Value.(*ParasiteData)
 		table.Rows = append(table.Rows, []string{
 			last.Key,
-			fmt.Sprintf("%5.1f%%", last.SoilMoisture),
 			fmt.Sprintf("%5.1fC", last.TempCelcius),
 			fmt.Sprintf("%5.1f%%", last.Humidity),
+			fmt.Sprintf("%5.2fV", last.BatteryPercentage),
 			fmt.Sprintf("%5.2fV", last.BatteryVoltage),
 			fmt.Sprintf("%ddBm", last.RSSI),
 			fmt.Sprintf("%.0fs ago", time.Since(last.Time).Seconds()),
@@ -211,9 +210,9 @@ func (tui *TUI) Render() {
 	widgets := tui.widgets
 	ui.Render(widgets.header,
 		widgets.help,
-		widgets.soilMoisture,
 		widgets.temp,
 		widgets.humidity,
+		widgets.batteryPercentage,
 		widgets.batteryVoltage,
 		widgets.rssi,
 		widgets.table)
@@ -245,7 +244,7 @@ func plotRecentData(plot *widgets.Plot, r *ring.Ring, getter func(datapoint *Par
 func DumpDB(db *DB) {
 	logger.Println("Dumping DB:")
 	keys := make([]string, 0)
-	for k, _ := range *db {
+	for k := range *db {
 		keys = append(keys, k)
 	}
 	sort.Strings(keys)

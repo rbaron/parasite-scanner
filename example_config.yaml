@@ -1,28 +1,16 @@
 mqtt:
-  host: raspberrypi:1883
-  username: mqttuser
-  password: mqttpassword
+  host: mqtt.server.local:1883
+  username: user
+  password: password
   client_id: parasite-scanner
   # If `auto_discovery` is enabled, an MQTT message will be published (retained)
   # to the homeassistant/sensor/parasite-scanner/<sensor_name_and_type>/config,
   # so it's automatically discoverable by Home Assistant (according to
   # https://www.home-assistant.io/docs/mqtt/discovery/).
-  auto_discovery: true
-  # `registry` maps MAC addresses to devices' MQTT configuration. For now, the only
-  # configuration is `name`, and the MQTT topics will be derived from it.
-  # For example, for a device with name "Office parasite", the following topics will
-  # be derived:
-  # - parasite-scanner/sensor/office_parasite_soil_moisture/state
-  # - parasite-scanner/sensor/office_parasite_temperature/state
-  # - parasite-scanner/sensor/office_parasite_humidity/state
-  # - parasite-scanner/sensor/office_parasite_battery_voltage/state
-  # - parasite-scanner/sensor/office_parasite_rssi/state
-  registry:
-    "f0:ca:f0:ca:00:01":
-      name: "Office parasite"
-    "f0:ca:f0:ca:00:02":
-      name: "Lime tree"
+prometheus:
+    host: 0.0.0.0:9265
 ble:
+  vendor_prefix: A4:C1:38
   # macOS hides the real MAC address from BLE peripherals, and instead assign
   # discovered devices a UUID. This UUID is not guaranteed to be stable, but
   # in practice it doesn't seem to change frequently. You could find this
@@ -34,3 +22,25 @@ ble:
   # addresses of peripherals.
   macos:
     infer_mac_address: false
+global:
+  auto_discovery: true
+  # `registry` maps MAC addresses to devices' MQTT configuration. For now, the only
+  # configuration is `name`, and the MQTT topics will be derived from it.
+  # For example, for a device with name "Office parasite", the following topics will
+  # be derived:
+  # - parasite-scanner/sensor/office_parasite_soil_moisture/state
+  # - parasite-scanner/sensor/office_parasite_temperature/state
+  # - parasite-scanner/sensor/office_parasite_humidity/state
+  # - parasite-scanner/sensor/office_parasite_battery_voltage/state
+  # - parasite-scanner/sensor/office_parasite_rssi/state
+  registry:
+    "a4:c1:38:5c:3a:7a":
+      name: "sensor1"
+    "a4:c1:38:12:bf:13":
+      name: "sensor2"
+    "a4:c1:38:36:3c:37":
+      name: "sensor3"
+    "a4:c1:38:02:42:4c":
+      name: "sensor5"
+    "a4:c1:38:25:96:1f":
+      name: "sensor5"

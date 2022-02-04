@@ -10,58 +10,70 @@ import (
 
 type MACAddr string
 
-type MQTTParasiteConfig struct {
+type ParasiteConfig struct {
 	Name string `yaml:"name"`
 }
 
 const kBaseMQTTTopic string = "parasite-scanner/sensor/%s_%s/state"
 
-func (cfg *MQTTParasiteConfig) NormalizedName() string {
+func (cfg *ParasiteConfig) NormalizedName() string {
 	return strings.Replace(strings.ToLower(cfg.Name), " ", "_", -1)
 }
 
-func (cfg *MQTTParasiteConfig) SoilMoistureTopic() string {
-	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "soil_moisture")
-}
-
-func (cfg *MQTTParasiteConfig) TemperatureTopic() string {
+func (cfg *ParasiteConfig) TemperatureTopic() string {
 	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "temperature")
 }
 
-func (cfg *MQTTParasiteConfig) HumidityTopic() string {
+func (cfg *ParasiteConfig) HumidityTopic() string {
 	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "humidity")
 }
 
-func (cfg *MQTTParasiteConfig) BatteryVoltageTopic() string {
+func (cfg *ParasiteConfig) BatteryPercentageTopic() string {
+	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "battery_percentage")
+}
+
+func (cfg *ParasiteConfig) BatteryVoltageTopic() string {
 	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "battery_voltage")
 }
 
-func (cfg *MQTTParasiteConfig) RSSITopic() string {
+func (cfg *ParasiteConfig) RSSITopic() string {
 	return fmt.Sprintf(kBaseMQTTTopic, cfg.NormalizedName(), "rssi")
 }
 
+type DEVICEConfig struct {
+	Registry map[MACAddr]*ParasiteConfig `yaml:"registry"`
+}
+
+type PROMConfig struct {
+	Enable bool   `yaml:"enable"`
+	Host   string `yaml:"host"`
+}
+
 type MQTTConfig struct {
-	Host          string                          `yaml:"host"`
-	Username      string                          `yaml:"username"`
-	Password      string                          `yaml:"password"`
-	ClientId      string                          `yaml:"client_id"`
-	AutoDiscovery bool                            `yaml:"auto_discovery"`
-	Registry      map[MACAddr]*MQTTParasiteConfig `yaml:"registry"`
+	Enable        bool   `yaml:"enable"`
+	Host          string `yaml:"host"`
+	Username      string `yaml:"username"`
+	Password      string `yaml:"password"`
+	ClientId      string `yaml:"client_id"`
+	AutoDiscovery bool   `yaml:"auto_discovery"`
 }
 
 type BLEConfig struct {
-	MacOS struct {
+	VendorPrefix string `yaml:"vendor_prefix"`
+	MacOS        struct {
 		InferMACAddress  bool   `yaml:"infer_mac_address"`
 		MACAddressPrefix string `yaml:"mac_address_prefix"`
 	} `yaml:"macos"`
 }
 
 type Config struct {
-	MQTT MQTTConfig `yaml:"mqtt"`
-	BLE  BLEConfig
+	PROM   PROMConfig   `yaml:"prometheus"`
+	MQTT   MQTTConfig   `yaml:"mqtt"`
+	DEVICE DEVICEConfig `yaml:"device"`
+	BLE    BLEConfig    `yaml:"ble"`
 }
 
-func ValidateMQTTParasiteConfig(cfg *MQTTParasiteConfig) error {
+func ValidateParasiteConfig(cfg *ParasiteConfig) error {
 	if cfg.Name == "" {
 		return fmt.Errorf("missing name")
 	}
@@ -82,14 +94,14 @@ func ParseConfig(filename string) (*Config, error) {
 		return nil, err
 	}
 
-	for macAddr, mqttCfg := range config.MQTT.Registry {
-		if err := ValidateMQTTParasiteConfig(mqttCfg); err != nil {
+	for macAddr, globalCfg := range config.DEVICE.Registry {
+		if err := ValidateParasiteConfig(globalCfg); err != nil {
 			return nil, fmt.Errorf("%s: %s", macAddr, err.Error())
 		}
 		// Normalize MAC address (to lowercase).
-		delete(config.MQTT.Registry, macAddr)
+		delete(config.DEVICE.Registry, macAddr)
 		normalizedMACAddr := strings.ToLower(string(macAddr))
-		config.MQTT.Registry[MACAddr(normalizedMACAddr)] = mqttCfg
+		config.DEVICE.Registry[MACAddr(normalizedMACAddr)] = globalCfg
 	}
 	return config, nil
 }

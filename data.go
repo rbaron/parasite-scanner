@@ -11,21 +11,21 @@ import (
 // Consumers of ParasiteData should implement the DataSubscriber interface below, and
 // will be fed new data upon arrival.
 type ParasiteData struct {
-	Key            string
-	Counter        uint8
-	BatteryVoltage float32
-	TempCelcius    float32
-	Humidity       float32
-	SoilMoisture   float32
-	Time           time.Time
-	RSSI           int
+	Key               string
+	Counter           uint8
+	BatteryPercentage float64
+	BatteryVoltage    float64
+	TempCelcius       float64
+	Humidity          float64
+	Time              time.Time
+	RSSI              int
 }
 
 func (pd ParasiteData) String() string {
 	return fmt.Sprintf(
-		"%s | soil: %5.1f%% | batt: %3.1fV | temp: %4.1fC | humi: %5.1f%% | %6.1fs ago | counter: %d",
+		"%s | battp: %2.1f%% | battv: %3.1fV | temp: %4.1fC | humi: %5.1f%% | %6.1fs ago | counter: %d",
 		pd.Key,
-		pd.SoilMoisture,
+		pd.BatteryPercentage,
 		pd.BatteryVoltage,
 		pd.TempCelcius,
 		pd.Humidity,
