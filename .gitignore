@@ -13,3 +13,6 @@ config.yaml
 
 # Vendor
 vendor
+
+# Other
+install_notes
