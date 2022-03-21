@@ -1,22 +1,26 @@
-package main
+package exporter
 
 import (
 	"errors"
 	"net/http"
 	"sync"
 	"time"
+	"log"
 
 	"github.com/julienschmidt/httprouter"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+
+	cfg "github.com/SysdigDan/parasite-scanner/pkg/config"
+	"github.com/SysdigDan/parasite-scanner/pkg/data"
 )
 
 type PrometheusExporter struct {
 	exporter *http.Server
-	promData chan *ParasiteData
-	config   *PROMConfig
-	device   *DEVICEConfig
+	promData chan *data.ParasiteData
+	config   *cfg.PROMConfig
+	device   *cfg.DEVICEConfig
 }
 
 var (
@@ -108,7 +112,7 @@ func bump(name, mac string, expiry time.Duration) {
 		t.Reset(expiry)
 	} else {
 		expirers[mac] = time.AfterFunc(expiry, func() {
-			logger.Println("[exporter] Device expiring:", name, mac)
+			log.Println("[exporter] Device expiring:", name, mac)
 			tempGauge.DeleteLabelValues(Sensor, name, mac)
 			humGauge.DeleteLabelValues(Sensor, name, mac)
 			battGauge.DeleteLabelValues(Sensor, name, mac)
@@ -126,27 +130,27 @@ func bump(name, mac string, expiry time.Duration) {
 
 func logTemperature(name, mac string, temp float64) {
 	tempGauge.WithLabelValues(Sensor, name, mac).Set(temp)
-	logger.Printf("[exporter] %s thermometer_temperature_celsius %.1f\n", name, temp)
+	log.Printf("[exporter] %s thermometer_temperature_celsius %.1f\n", name, temp)
 }
 
 func logHumidity(name, mac string, hum float64) {
 	humGauge.WithLabelValues(Sensor, name, mac).Set(hum)
-	logger.Printf("[exporter] %s thermometer_humidity_ratio %.0f\n", name, hum)
+	log.Printf("[exporter] %s thermometer_humidity_ratio %.0f\n", name, hum)
 }
 
 func logVoltage(name, mac string, batv float64) {
 	voltGauge.WithLabelValues(Sensor, name, mac).Set(batv)
-	logger.Printf("[exporter] %s thermometer_battery_volts %.3f\n", name, batv)
+	log.Printf("[exporter] %s thermometer_battery_volts %.3f\n", name, batv)
 }
 
 func logRSSI(name, mac string, rssi float64) {
 	rssiGauge.WithLabelValues(Sensor, name, mac).Set(rssi)
-	logger.Printf("[exporter] %s thermometer_rssi_dbm %.3f\n", name, rssi)
+	log.Printf("[exporter] %s thermometer_rssi_dbm %.3f\n", name, rssi)
 }
 
 func logBatteryPercent(name, mac string, batp float64) {
 	battGauge.WithLabelValues(Sensor, name, mac).Set(batp)
-	logger.Printf("[exporter] %s thermometer_battery_ratio %.0f\n", name, batp)
+	log.Printf("[exporter] %s thermometer_battery_ratio %.0f\n", name, batp)
 }
 
 func LogStockCharacteristic(name, mac string, temp float64, hum float64, batv float64) {
@@ -187,19 +191,19 @@ func exporterRouter() *httprouter.Router {
 	return router
 }
 
-func MakePROMExporter(device *DEVICEConfig, cfg *PROMConfig) *PrometheusExporter {
+func MakePROMExporter(device *cfg.DEVICEConfig, cfg *cfg.PROMConfig) *PrometheusExporter {
 	return &PrometheusExporter{
 		exporter: &http.Server{
 			Addr:    cfg.Host,
 			Handler: exporterRouter(),
 		},
-		promData: make(chan *ParasiteData),
+		promData: make(chan *data.ParasiteData),
 		config:   cfg,
 		device:   device,
 	}
 }
 
-func (exporter *PrometheusExporter) LogPrometheusData(deviceConfig *ParasiteConfig, data *ParasiteData) {
+func (exporter *PrometheusExporter) LogPrometheusData(deviceConfig *cfg.ParasiteConfig, data *data.ParasiteData) {
 	bump(deviceConfig.Name, data.Key, ExpiryAtc)
 	logTemperature(deviceConfig.Name, data.Key, data.TempCelcius)
 	logHumidity(deviceConfig.Name, data.Key, data.Humidity)
@@ -208,12 +212,12 @@ func (exporter *PrometheusExporter) LogPrometheusData(deviceConfig *ParasiteConf
 	logRSSI(deviceConfig.Name, data.Key, float64(data.RSSI))
 }
 
-func (exporter *PrometheusExporter) Ingest(data *ParasiteData) {
+func (exporter *PrometheusExporter) Ingest(data *data.ParasiteData) {
 	exporter.promData <- data
 }
 
 func (exporter *PrometheusExporter) Start() error {
-	logger.Println("[exporter] Starting Prometheus exporter...")
+	log.Println("[exporter] Starting Prometheus exporter...")
 
 	if len(exporter.exporter.Addr) == 0 {
 		return errors.New("Exporter missing address")
@@ -229,15 +233,15 @@ func (exporter *PrometheusExporter) Start() error {
 func (exporter *PrometheusExporter) Run() {
 	go func() {
 		if err := exporter.Start(); err != nil {
-			logger.Fatal(err.Error())
+			log.Fatal(err.Error())
 		}
-		logger.Printf("[exporter] Prometheus exporter listening on %s\n", exporter.config.Host)
+		log.Printf("[exporter] Prometheus exporter listening on %s\n", exporter.config.Host)
 	}()
 
 	for data := range exporter.promData {
-		deviceConfig, exists := exporter.device.Registry[MACAddr(data.Key)]
+		deviceConfig, exists := exporter.device.Registry[cfg.MACAddr(data.Key)]
 		if !exists {
-			logger.Printf("[mqtt] Received valid BLE broadcast from %s, but it's not configured for MQTT\n", data.Key)
+			log.Printf("[mqtt] Received valid BLE broadcast from %s, but it's not configured for MQTT\n", data.Key)
 			continue
 		}
 		exporter.LogPrometheusData(deviceConfig, data)

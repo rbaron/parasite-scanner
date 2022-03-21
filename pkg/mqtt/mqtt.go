@@ -1,22 +1,26 @@
-package main
+package mqtt
 
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	
+	cfg "github.com/SysdigDan/parasite-scanner/pkg/config"
+	"github.com/SysdigDan/parasite-scanner/pkg/data"
 )
 
 // MQTTClient implements the DataSubscriber interface.
 // It will prepate and publish incoming data to their respective MQTT topics.
 type MQTTClient struct {
 	client   mqtt.Client
-	outgoing chan *ParasiteData
-	config   *MQTTConfig
-	device   *DEVICEConfig
+	outgoing chan *data.ParasiteData
+	config   *cfg.MQTTConfig
+	device   *cfg.DEVICEConfig
 }
 
-func MakeMQTTClient(device *DEVICEConfig, cfg *MQTTConfig) *MQTTClient {
+func MakeMQTTClient(device *cfg.DEVICEConfig, cfg *cfg.MQTTConfig) *MQTTClient {
 	opts := mqtt.
 		NewClientOptions().
 		AddBroker(cfg.Host).
@@ -31,7 +35,7 @@ func MakeMQTTClient(device *DEVICEConfig, cfg *MQTTConfig) *MQTTClient {
 	client := mqtt.NewClient(opts)
 	return &MQTTClient{
 		client:   client,
-		outgoing: make(chan *ParasiteData),
+		outgoing: make(chan *data.ParasiteData),
 		config:   cfg,
 		device:   device,
 	}
@@ -58,7 +62,7 @@ type AutoDiscoveryMsg struct {
 	Payload AutoDiscoveryPayload
 }
 
-func makeAutoDiscoveryMessages(deviceConfig *ParasiteConfig) []*AutoDiscoveryMsg {
+func makeAutoDiscoveryMessages(deviceConfig *cfg.ParasiteConfig) []*AutoDiscoveryMsg {
 	device := &AutoDiscoveryDeviceInfo{
 		Identifiers:  "parasite-scanner",
 		Name:         "parasite-scanner",
@@ -118,7 +122,7 @@ func makeAutoDiscoveryMessages(deviceConfig *ParasiteConfig) []*AutoDiscoveryMsg
 	}
 }
 
-func (client *MQTTClient) publishData(deviceConfig *ParasiteConfig, data *ParasiteData) {
+func (client *MQTTClient) publishData(deviceConfig *cfg.ParasiteConfig, data *data.ParasiteData) {
 	client.Publish(deviceConfig.TemperatureTopic(), fmt.Sprintf("%.1f", data.TempCelcius), false, 1)
 	client.Publish(deviceConfig.HumidityTopic(), fmt.Sprintf("%.1f", data.Humidity), false, 1)
 	client.Publish(deviceConfig.BatteryPercentageTopic(), fmt.Sprintf("%.1f", data.BatteryPercentage), false, 1)
@@ -127,11 +131,11 @@ func (client *MQTTClient) publishData(deviceConfig *ParasiteConfig, data *Parasi
 }
 
 func (client *MQTTClient) Publish(topic string, msg string, retained bool, qos byte) mqtt.Token {
-	logger.Printf("[mqtt] Publishing %s to %s\n", msg, topic)
+	log.Printf("[mqtt] Publishing %s to %s\n", msg, topic)
 	return client.client.Publish(topic, qos, retained, msg)
 }
 
-func (client *MQTTClient) Ingest(data *ParasiteData) {
+func (client *MQTTClient) Ingest(data *data.ParasiteData) {
 	client.outgoing <- data
 }
 
@@ -142,7 +146,7 @@ func (client *MQTTClient) Run() {
 
 	if client.config.AutoDiscovery {
 		for macAddr, deviceConfig := range client.device.Registry {
-			logger.Printf("[mqtt] Generating auto-discovery messages for %s\n", macAddr)
+			log.Printf("[mqtt] Generating auto-discovery messages for %s\n", macAddr)
 			for _, msg := range makeAutoDiscoveryMessages(deviceConfig) {
 				payload, _ := json.Marshal(msg.Payload)
 				client.Publish(msg.Topic, string(payload), true, 1)
@@ -153,9 +157,9 @@ func (client *MQTTClient) Run() {
 	client.Publish("parasite-scanner/status", "online", true, 1)
 
 	for data := range client.outgoing {
-		deviceConfig, exists := client.device.Registry[MACAddr(data.Key)]
+		deviceConfig, exists := client.device.Registry[cfg.MACAddr(data.Key)]
 		if !exists {
-			logger.Printf("[mqtt] Received valid BLE broadcast from %s, but it's not configured for MQTT\n", data.Key)
+			log.Printf("[mqtt] Received valid BLE broadcast from %s, but it's not configured for MQTT\n", data.Key)
 			continue
 		}
 		client.publishData(deviceConfig, data)

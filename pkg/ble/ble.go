@@ -1,12 +1,16 @@
-package main
+package ble
 
 import (
 	"encoding/binary"
 	"fmt"
 	"strings"
 	"time"
+	"log"
 
 	"tinygo.org/x/bluetooth"
+
+	cfg "github.com/SysdigDan/parasite-scanner/pkg/config"
+	"github.com/SysdigDan/parasite-scanner/pkg/data"
 )
 
 const kMacOSMACAddrPrefix = "f0:ca:f0:ca:"
@@ -15,14 +19,14 @@ type ParasiteScanner struct {
 	// We use a wrap-around counter inside the advertisement payload for
 	// deduplicating messages.
 	lastCounter map[string]int
-	channel     chan *ParasiteData
-	cfg         *BLEConfig
+	channel     chan *data.ParasiteData
+	cfg         *cfg.BLEConfig
 }
 
-func MakeParasiteScanner(cfg *BLEConfig) *ParasiteScanner {
+func MakeParasiteScanner(cfg *cfg.BLEConfig) *ParasiteScanner {
 	return &ParasiteScanner{
 		lastCounter: map[string]int{},
-		channel:     make(chan *ParasiteData),
+		channel:     make(chan *data.ParasiteData),
 		cfg:         cfg,
 	}
 }
@@ -35,7 +39,7 @@ func MakeParasiteScanner(cfg *BLEConfig) *ParasiteScanner {
 // reasons, and the API only returns an UUID for us instead.
 // To get around this, p-parasite encodes its own MAC addresses
 // in its advertisement data, which we try to pull here.
-func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
+func getKey(cfg *cfg.BLEConfig, scanResult *bluetooth.ScanResult) string {
 	addr := strings.ToLower(scanResult.Address.String())
 	if !cfg.MacOS.InferMACAddress {
 		return addr
@@ -50,7 +54,7 @@ func getKey(cfg *BLEConfig, scanResult *bluetooth.ScanResult) string {
 		// macOS - we try to read the MAC address from the payload data.
 		serviceData := scanResult.AdvertisementPayload.GetServiceDatas()[0].Data
 		if len(serviceData) < 16 {
-			logger.Printf("[ble] Unable to infer MAC address from %s\n", addr)
+			log.Printf("[ble] Unable to infer MAC address from %s\n", addr)
 			return addr
 		}
 		macAddr := serviceData[10:16]
@@ -66,7 +70,7 @@ func decodeSign(i uint16) int {
 	}
 }
 
-func parseParasiteData(cfg *BLEConfig, scanResult bluetooth.ScanResult) (*ParasiteData, error) {
+func parseParasiteData(cfg *cfg.BLEConfig, scanResult bluetooth.ScanResult) (*data.ParasiteData, error) {
 	if len(scanResult.AdvertisementPayload.GetServiceDatas()) != 1 {
 		return nil, fmt.Errorf("unexpected length of service datas")
 	}
@@ -78,7 +82,7 @@ func parseParasiteData(cfg *BLEConfig, scanResult bluetooth.ScanResult) (*Parasi
 		return nil, fmt.Errorf("invalid service data uuid: %s", uuid)
 	}
 
-	return &ParasiteData{
+	return &data.ParasiteData{
 		Key:               getKey(cfg, &scanResult),
 		Counter:           serviceData.Data[12] & 0x0f,
 		BatteryPercentage: float64(serviceData.Data[9]),
@@ -101,11 +105,11 @@ func (scanner *ParasiteScanner) Run() {
 		if strings.HasPrefix(scanResult.Address.String(), scanner.cfg.VendorPrefix) {
 			data, err := parseParasiteData(scanner.cfg, scanResult)
 			if err != nil {
-				logger.Println("[ble] Error parsing parasite data:", err.Error())
+				log.Println("[ble] Error parsing parasite data:", err.Error())
 			} else {
 				// Have we processed this data already?
 				if oldCounter, exists := scanner.lastCounter[data.Key]; exists && oldCounter == int(data.Counter) {
-					logger.Println("[ble] Skipping already processed data (based on counter):", data)
+					log.Println("[ble] Skipping already processed data (based on counter):", data)
 					return
 				}
 				scanner.lastCounter[data.Key] = int(data.Counter)
