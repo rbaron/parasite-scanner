@@ -10,7 +10,6 @@ import (
 	"github.com/SysdigDan/parasite-scanner/pkg/mqtt"
 )
 
-var showUI = flag.Bool("ui", false, "renders a terminal-based ui for iteractive use")
 var configFile = flag.String("config", "config.yaml", "YAML config filename")
 
 func main() {
