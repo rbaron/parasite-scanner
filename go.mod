@@ -7,7 +7,7 @@ require (
 	github.com/julienschmidt/httprouter v1.3.0
 	github.com/prometheus/client_golang v1.12.1
 	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b
-	tinygo.org/x/bluetooth v0.3.0
+	tinygo.org/x/bluetooth v0.4.0
 )
 
 require (
@@ -30,4 +30,4 @@ require (
 	google.golang.org/protobuf v1.27.1 // indirect
 )
 
-replace tinygo.org/x/bluetooth v0.3.0 => github.com/rbaron/bluetooth v0.3.1-0.20210501180115-a5ddbbc48845
+replace tinygo.org/x/bluetooth v0.4.0 => github.com/rbaron/bluetooth v0.3.1-0.20210501180115-a5ddbbc48845
